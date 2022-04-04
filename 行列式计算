@@ -1,0 +1,107 @@
+# include<iostream>
+# include<cmath>
+using namespace std;
+
+const int Size = 10;
+// 声明函数
+int Accomp(int *A, int *B, int B_size, int destcol);
+int Calcuate(int *A, int n);
+void PrintArray(int *A, int n);
+
+// 这是个引导，二维数组实际上寻找 a[i][j] 的地址，在内存中是该形式
+// 二维数组在内存中的存储是连续的。
+int *TrueAddress(int *A, int n, int i, int j) {
+	return A + i * n + j;
+}
+
+// 打印子式
+void PrintArray(int *A, int n) {
+	for(int i = 0; i < n; i++) {
+		printf("[");
+		for (int j = 0; j < n; j++) {
+			if(j == n - 1)
+				printf("%d]", *(A + i * n + j));
+			else
+				printf("%d  ", *(A + i * n + j));
+		}
+		cout << endl;
+	}
+}
+
+// 输入行列式
+void ScanfArray(int *A, int n) {
+	for(int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			scanf("%d", A + i * n + j);
+		}
+	}
+}
+
+// 创建二维动态数组，（注意：只有指针数组才能存储地址，如果直接用int数组存储指针会报错）
+int **ArrayFactor(int n) {
+	int **arr = new int* [n];
+	for(int j = 0; j < n;j++){
+		arr[j] = new int[n];
+	}
+	return arr;
+}
+
+int main() {
+	int n;
+	cout <<"Enter your size: ";
+	cin >> n;
+	int **arr = ArrayFactor(n);
+	//	二维动态数组传递使用该方法最佳，只不过在使用的时候不能直接用[]
+	//	具体格式从以下两个函数中可以看出,传递时可以直接传递首元素的地址，此时为类似一维数组
+	ScanfArray(&arr[0][0], n);
+	PrintArray(&arr[0][0], n);
+	printf("The Determinant = %d\n", Calcuate(&arr[0][0], n));
+	delete []arr;
+	cin.get();
+	cin.get();
+	return 0;
+}
+
+/*******
+计算行列式我们采取最朴素的方式，采用第一行的每一项展开，然后求解。
+问题的难点在于求解第一行每一个元素的余子式，这个解决方式很精彩，采用与行列式函数相互调用，递归求解
+
+注：二维动态数组，如果在本函数体内似乎无法被修改或者赋值，不知道是 bug 还是 特性。
+
+*/
+int Calcuate(int *A, int n) {
+	// 递归出口，二阶行列式，直接使用对角线元素乘积做差
+	if(n == 2) {
+		int principal, counter;
+		principal = (*A) * (*(A + 3));
+		counter = (*(A + 1)) * (*(A + 2));
+		return principal - counter;
+	}
+	int res = 0;
+	int an = 0;
+	for(int i = 0; i < n; i++) {
+		// 定义一个二维数组存储余子式, 也可以直接合并到第三个计算式字中，这里只是为了方便理解
+		int **ar = ArrayFactor(n - 1);
+		an = *(A + i);
+		res += an * (pow(-1, double(i + 2))) * Accomp(A, &ar[0][0], n - 1, i);
+	}
+	return res;
+}
+
+// destcol 表示到 An 的列数，即展开到了哪一列，原则上我们以第一行展开，所以锁定第一行，只传递列数就可以。
+int Accomp(int *A, int *B, int B_size, int destcol) {
+	int i, j, k;
+	for(i = 1; i < B_size + 1; i++) {
+		k = 0;
+		for(j = 0; j < B_size + 1; j++){
+			if(j != destcol) {
+				// 深坑，这里如果余子式二维数组在本函数内被定义，这里无论怎么写，
+				// 即使在逻辑上看起来能够使得B[i][j] = A[i][j] 但是该步骤不会被执行！！！
+				// 带我学成归来，解决！！！
+				*(B + (i - 1) * B_size + k) = *(A + i * (B_size + 1) + j);
+				k++;	
+			}
+		}
+	}
+	return Calcuate(B, B_size);
+}
